@@ -1,0 +1,12 @@
+{
+  "name": "erledigedas-backend",
+  "version": "0.1.0",
+  "description": "Backend für die ErledigeDas-Plattform (Prototyp)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>ErledigeDas – Botengänge europaweit</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --bg:#f5f4f0; --card:#ffffff; --border:#e2e0d8; --text:#1f1e1c; --text2:#6b6a63; --muted:#9c9a90;
+    --accent:#0f6e56; --accent-light:#e1f5ee; --accent-dark:#04342c;
+    --warn:#854f0b; --warn-light:#faeeda;
+    --done:#5f5e5a; --done-light:#f1efe8;
+    --danger:#993c1d; --danger-light:#faece7;
+    --pro:#534ab7; --pro-light:#eeedfe;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:1240px;margin:0 auto;padding:16px;}
+  .app{display:grid;grid-template-columns:1fr 400px;gap:16px;}
+  @media(max-width:900px){.app{grid-template-columns:1fr;}}
+  h1{font-size:20px;font-weight:600;margin:0 0 4px;}
+  .sub{color:var(--text2);font-size:13px;margin:0 0 12px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .map-card{padding:0;overflow:hidden;}
+  #map{height:520px;width:100%;background:#eef2ee;}
+  .job-pin-icon{width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);}
+  .job-pin-open{background:#0f6e56;}
+  .job-pin-taken{background:#854f0b;}
+  .job-pin-done{background:#9c9a90;}
+  .job-pin-expired{background:#993c1d;}
+  .leaflet-popup-content{font-size:12px;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 16px;font-size:12px;color:var(--text2);border-top:1px solid var(--border);background:#fff;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .account-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 10px;flex-wrap:wrap;}
+  .account-badges{display:flex;align-items:center;gap:4px;margin-left:auto;}
+  .tabs{display:flex;gap:6px;margin-bottom:12px;}
+  .tab{flex:1;text-align:center;padding:7px 4px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text2);}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .job-list{display:flex;flex-direction:column;gap:8px;max-height:230px;overflow:auto;margin-bottom:14px;}
+  .job-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;background:#fff;}
+  .job-item:hover{border-color:var(--accent);}
+  .job-item.selected{border-color:var(--accent);background:var(--accent-light);}
+  .job-title{font-size:13px;font-weight:600;margin:0 0 2px;}
+  .job-meta{font-size:12px;color:var(--text2);display:flex;justify-content:space-between;gap:6px;}
+  .badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap;}
+  .badge-open{background:var(--accent-light);color:var(--accent-dark);}
+  .badge-taken{background:var(--warn-light);color:var(--warn);}
+  .badge-done{background:var(--done-light);color:var(--done);}
+  .badge-expired{background:var(--danger-light);color:var(--danger);}
+  .detail{border-top:1px solid var(--border);padding-top:14px;margin-top:4px;}
+  label{display:block;font-size:12px;color:var(--text2);margin:8px 0 3px;}
+  input,textarea,select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;}
+  textarea{resize:vertical;min-height:50px;}
+  button{cursor:pointer;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;}
+  .btn-primary{background:var(--accent);color:#fff;width:100%;margin-top:10px;}
+  .btn-secondary{background:#fff;border:1px solid var(--border);color:var(--text);width:100%;margin-top:8px;}
+  .btn-primary:disabled{background:var(--muted);cursor:not-allowed;}
+  .reward{font-size:15px;font-weight:700;color:var(--accent-dark);}
+  .voucher{background:var(--accent-light);border:1px dashed var(--accent);border-radius:10px;padding:12px;margin-top:10px;text-align:center;}
+  .voucher code{font-size:15px;font-weight:700;letter-spacing:1px;color:var(--accent-dark);}
+  hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+  .toggle-form{font-size:12px;color:var(--accent);cursor:pointer;text-align:right;margin-bottom:10px;}
+  .countdown{font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;margin:8px 0;}
+  .countdown.ok{background:var(--warn-light);color:var(--warn);}
+  .countdown.late{background:var(--danger-light);color:var(--danger);}
+  .escrow-note{font-size:11px;color:var(--pro);background:var(--pro-light);border-radius:8px;padding:6px 10px;margin-top:6px;}
+  .photo-box{border:1px dashed var(--border);border-radius:10px;padding:10px;margin-top:10px;text-align:center;}
+  .photo-box img{max-width:100%;border-radius:8px;margin-top:8px;}
+  .note{font-size:11px;color:var(--muted);margin-top:4px;}
+  .board-card{margin-top:16px;}
+  .board-title{font-size:13px;font-weight:600;margin:0 0 10px;}
+  .board-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .board-row:last-child{border-bottom:none;}
+  .board-rank{width:20px;text-align:center;font-weight:700;color:var(--muted);}
+  .board-rank.gold{color:var(--amber,#ba7517);}
+  .board-name{flex:1;}
+  .board-count{font-weight:600;color:var(--accent-dark);}
+  .tier-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;white-space:nowrap;}
+  .tier-bronze{background:#faeeda;color:#854f0b;}
+  .tier-silver{background:#f1efe8;color:#5f5e5a;}
+  .tier-gold{background:#faeeda;color:#412402;border:1px solid #ba7517;}
+  .trust-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;white-space:nowrap;}
+  .trust-high{background:var(--accent-light);color:var(--accent-dark);}
+  .trust-mid{background:var(--warn-light);color:var(--warn);}
+  .trust-low{background:var(--danger-light);color:var(--danger);}
+  .error-box{background:var(--danger-light);color:var(--danger);border-radius:8px;padding:8px 10px;font-size:12px;margin-top:8px;}
+  .auth-card{max-width:380px;margin:60px auto;}
+  .auth-tabs{display:flex;gap:6px;margin-bottom:14px;}
+  .auth-tabs .tab{flex:1;}
+  .config-note{font-size:11px;color:var(--muted);text-align:center;margin-top:10px;}
+  .logout-link{font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline;}
+  .loading{font-size:12px;color:var(--muted);padding:8px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== Login/Registrierung ===== -->
+  <div id="authScreen" style="display:none;">
+    <div class="card auth-card">
+      <h1>ErledigeDas</h1>
+      <p class="sub">Melde dich an, um Jobs zu sehen und anzunehmen.</p>
+      <div class="auth-tabs">
+        <div class="tab active" data-mode="login">Einloggen</div>
+        <div class="tab" data-mode="register">Registrieren</div>
+      </div>
+      <label>Name</label>
+      <input id="auth-name" placeholder="z.B. Anna M.">
+      <label>Passwort</label>
+      <input id="auth-password" type="password" placeholder="mind. 6 Zeichen">
+      <button class="btn-primary" id="authSubmitBtn">Einloggen</button>
+      <div id="authError"></div>
+      <p class="config-note">Backend-Adresse: <code id="apiBaseLabel"></code> — änderbar oben im Code (Variable <code>API_BASE</code>).</p>
+    </div>
+  </div>
+
+  <!-- ===== Hauptapp ===== -->
+  <div id="mainApp" style="display:none;">
+    <div class="app">
+      <div>
+        <h1>ErledigeDas</h1>
+        <p class="sub">Botengänge europaweit – einstellen, exklusiv annehmen, mit Frist erledigen, Treuhand-Auszahlung nach Fotobeweis.</p>
+        <div class="card map-card">
+          <div id="map"></div>
+          <div class="legend">
+            <span><span class="dot" style="background:#0f6e56"></span>Offen</span>
+            <span><span class="dot" style="background:#854f0b"></span>Angenommen</span>
+            <span><span class="dot" style="background:#9c9a90"></span>Erledigt</span>
+            <span><span class="dot" style="background:#993c1d"></span>Frist abgelaufen</span>
+          </div>
+        </div>
+
+        <div class="card board-card">
+          <p class="board-title">Bestenliste – erledigte Jobs</p>
+          <div id="board" class="loading">Lädt…</div>
+        </div>
+
+        <div class="card board-card">
+          <p class="board-title">Top Auftraggeber</p>
+          <div id="posterBoard" class="loading">Lädt…</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="account-bar">
+          <span id="accountName">–</span>
+          <span class="account-badges" id="accountBadges"></span>
+          <span class="logout-link" id="logoutBtn">Abmelden</span>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active" data-filter="alle">Alle</div>
+          <div class="tab" data-filter="offen">Offen</div>
+          <div class="tab" data-filter="angenommen">Meine</div>
+          <div class="tab" data-filter="erledigt">Erledigt</div>
+        </div>
+        <div class="job-list" id="jobList"><div class="loading">Lädt…</div></div>
+
+        <div class="toggle-form" id="toggleForm">+ Neuen Job erstellen</div>
+        <div id="newJobForm" style="display:none;">
+          <label>Titel</label>
+          <input id="f-title" placeholder="z.B. Parfüm bei Douglas kaufen">
+          <label>Öffentliche Details (für alle sichtbar)</label>
+          <textarea id="f-desc" placeholder="Produkt, Hinweise, ungefähre Gegend..."></textarea>
+          <label>Stadt</label>
+          <select id="f-city"></select>
+          <label>Genaue Lieferadresse (erst nach Annahme sichtbar)</label>
+          <textarea id="f-address" placeholder="Straße, Hausnummer, PLZ, Ort..."></textarea>
+          <label>Belohnung (€, wird in Treuhand geblockt)</label>
+          <input id="f-reward" type="number" placeholder="15" min="1">
+          <label>Zeit zum Erledigen (Stunden ab Annahme)</label>
+          <input id="f-deadline" type="number" placeholder="2" min="1">
+          <label>Auszahlungsart</label>
+          <select id="f-payout">
+            <option value="paypal">PayPal</option>
+            <option value="stripe">Stripe (Banküberweisung)</option>
+            <option value="kreditkarte">Kreditkarten-Gutschrift</option>
+            <option value="klarna">Klarna</option>
+            <option value="amazon">Amazon-Gutschein</option>
+            <option value="steam">Steam-Gutschein</option>
+          </select>
+          <button class="btn-primary" id="createJobBtn">Job veröffentlichen</button>
+          <div id="createJobError"></div>
+          <p class="note">Der Auftraggeber zahlt zusätzlich 5% Plattformgebühr oben drauf (in Treuhand reserviert). Erfahrene, gut bewertete Ausführende (5+ erledigte Jobs, Trust ≥ 90%) erhalten die volle Belohnung; neue oder weniger erfahrene Personen erhalten 80%.</p>
+        </div>
+
+        <div class="detail" id="detail" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===================== Konfiguration =====================
+// Adresse deines Backends. Lokal zum Testen: http://localhost:3001
+// Nach dem Deployment (z.B. Render/Railway) hier die echte URL eintragen.
+const API_BASE = "http://localhost:3001";
+
+// ===================== Städte (für Job-Erstellung) =====================
+const cities = {
+  "Hamburg": [53.5511,9.9937], "Bremen": [53.0793,8.8017], "Berlin": [52.5200,13.4050],
+  "Hannover": [52.3759,9.7320], "Dortmund": [51.5136,7.4653], "Köln": [50.9375,6.9603],
+  "Düsseldorf": [51.2277,6.7735], "Leipzig": [51.3397,12.3731], "Dresden": [51.0504,13.7373],
+  "Frankfurt": [50.1109,8.6821], "Stuttgart": [48.7758,9.1829], "Nürnberg": [49.4521,11.0767],
+  "München": [48.1351,11.5820], "Freiburg": [47.9990,7.8421],
+  "Wien": [48.2082,16.3738], "Zürich": [47.3769,8.5417], "Paris": [48.8566,2.3522],
+  "Amsterdam": [52.3676,4.9041], "Brüssel": [50.8503,4.3517], "Madrid": [40.4168,-3.7038],
+  "Barcelona": [41.3874,2.1686], "Mailand": [45.4642,9.1900], "Rom": [41.9028,12.4964],
+  "Warschau": [52.2297,21.0122], "Prag": [50.0755,14.4378], "Kopenhagen": [55.6761,12.5683],
+  "Stockholm": [59.3293,18.0686], "Lissabon": [38.7223,-9.1393]
+};
+
+const payoutLabels = {
+  paypal: "PayPal", stripe: "Stripe (Banküberweisung)", kreditkarte: "Kreditkarte",
+  klarna: "Klarna", amazon: "Amazon-Gutschein", steam: "Steam-Gutschein"
+};
+
+// ===================== Zustand =====================
+let token = localStorage.getItem("edas_token") || null;
+let me = null;
+let jobs = [];
+let jobUserStatsCache = {}; // userId -> {tierBadge, trustFactor, payoutRate}
+let jobPhotoCache = {}; // jobId -> base64
+let selectedId = null;
+let filter = "alle";
+let leafletMap, markers = {};
+let authMode = "login";
+
+// ===================== API-Hilfsfunktion =====================
+async function api(path, opts = {}) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(API_BASE + path, { ...opts, headers });
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(data.error || ("Fehler " + res.status));
+  return data;
+}
+
+// ===================== Auth =====================
+document.getElementById("apiBaseLabel").textContent = API_BASE;
+
+document.querySelectorAll(".auth-tabs .tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".auth-tabs .tab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    authMode = t.dataset.mode;
+    document.getElementById("authSubmitBtn").textContent = authMode === "login" ? "Einloggen" : "Registrieren";
+  });
+});
+
+document.getElementById("authSubmitBtn").addEventListener("click", async () => {
+  const name = document.getElementById("auth-name").value.trim();
+  const password = document.getElementById("auth-password").value;
+  const errBox = document.getElementById("authError");
+  errBox.innerHTML = "";
+  if (!name || password.length < 6) {
+    errBox.innerHTML = '<div class="error-box">Name eingeben und Passwort mit mind. 6 Zeichen.</div>';
+    return;
+  }
+  try {
+    const path = authMode === "login" ? "/api/login" : "/api/register";
+    const data = await api(path, { method: "POST", body: JSON.stringify({ name, password }) });
+    token = data.token;
+    localStorage.setItem("edas_token", token);
+    me = data.user;
+    await startApp();
+  } catch (e) {
+    errBox.innerHTML = `<div class="error-box">${e.message}</div>`;
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  token = null;
+  me = null;
+  localStorage.removeItem("edas_token");
+  document.getElementById("mainApp").style.display = "none";
+  document.getElementById("authScreen").style.display = "block";
+});
+
+// ===================== Karte =====================
+function initMap() {
+  if (leafletMap) return;
+  leafletMap = L.map("map", { scrollWheelZoom: true }).setView([54.5, 15.5], 4);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap-Mitwirkende", maxZoom: 18
+  }).addTo(leafletMap);
+}
+
+function pinIcon(statusClass) {
+  return L.divIcon({
+    className: "", html: `<div class="job-pin-icon ${statusClass}"></div>`,
+    iconSize: [22, 22], iconAnchor: [11, 22], popupAnchor: [0, -22]
+  });
+}
+
+// ===================== Badge/Trust-Hilfsfunktionen (Anzeige) =====================
+function getTierBadgeHtml(tier) {
+  if (tier === "gold") return `<span class="tier-badge tier-gold">Gold 20+</span>`;
+  if (tier === "silber") return `<span class="tier-badge tier-silver">Silber 10+</span>`;
+  if (tier === "bronze") return `<span class="tier-badge tier-bronze">Bronze 5+</span>`;
+  return "";
+}
+function getTrustBadgeHtml(trust) {
+  if (trust === null || trust === undefined) return `<span class="trust-badge trust-mid">Trust: neu</span>`;
+  const cls = trust >= 90 ? "trust-high" : trust >= 70 ? "trust-mid" : "trust-low";
+  return `<span class="trust-badge ${cls}">Trust: ${trust}%</span>`;
+}
+
+async function getUserStats(userId) {
+  if (jobUserStatsCache[userId]) return jobUserStatsCache[userId];
+  try {
+    const data = await api(`/api/users/${userId}`);
+    jobUserStatsCache[userId] = data.user;
+    return data.user;
+  } catch (e) {
+    return null;
+  }
+}
+
+// ===================== Laden =====================
+async function loadMe() {
+  const data = await api("/api/me");
+  me = data.user;
+}
+
+async function loadJobs() {
+  const data = await api("/api/jobs");
+  jobs = data.jobs;
+}
+
+async function loadBoards() {
+  try {
+    const completed = await api("/api/leaderboard/completed");
+    const board = document.getElementById("board");
+    if (completed.leaderboard.length === 0) {
+      board.innerHTML = '<p style="font-size:12px;color:var(--muted);">Noch keine erledigten Jobs.</p>';
+    } else {
+      board.innerHTML = completed.leaderboard.map((r, i) => `
+        <div class="board-row">
+          <span class="board-rank${i === 0 ? " gold" : ""}">${i + 1}</span>
+          <span class="board-name">${r.name}${me && r.id === me.id ? " (du)" : ""}${getTierBadgeHtml(r.tierBadge)}</span>
+          <span class="board-count">${r.completed} erledigt</span>
+        </div>`).join("");
+    }
+  } catch (e) {}
+
+  try {
+    const posters = await api("/api/leaderboard/posters");
+    const board = document.getElementById("posterBoard");
+    if (posters.leaderboard.length === 0) {
+      board.innerHTML = '<p style="font-size:12px;color:var(--muted);">Noch keine veröffentlichten Jobs.</p>';
+    } else {
+      board.innerHTML = posters.leaderboard.map((r, i) => `
+        <div class="board-row">
+          <span class="board-rank${i === 0 ? " gold" : ""}">${i + 1}</span>
+          <span class="board-name">${r.name}${me && r.id === me.id ? " (du)" : ""}${getTierBadgeHtml(r.tierBadge)}</span>
+          <span class="board-count">${r.posted} veröffentlicht</span>
+        </div>`).join("");
+    }
+  } catch (e) {}
+}
+
+function formatRemaining(ms) {
+  if (ms <= 0) return "Frist abgelaufen";
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h} Std ${m} Min verbleibend` : `${m} Min verbleibend`;
+}
+
+// ===================== Rendern =====================
+function renderMapPins() {
+  initMap();
+  Object.values(markers).forEach(m => leafletMap.removeLayer(m));
+  markers = {};
+  jobs.forEach(j => {
+    const cls = j.status === "offen" ? "job-pin-open" : j.status === "angenommen" ? "job-pin-taken" : j.status === "abgelaufen" ? "job-pin-expired" : "job-pin-done";
+    const marker = L.marker([j.lat, j.lng], { icon: pinIcon(cls) }).addTo(leafletMap);
+    marker.bindPopup(j.approxOnly
+      ? `<strong>${j.title}</strong><br>${j.city} · ${j.reward} €<br><em>ungefähre Lage (~500 m) – genaue Adresse erst nach Annahme</em>`
+      : `<strong>${j.title}</strong><br>${j.city} · ${j.reward} €`);
+    marker.on("click", () => { selectedId = j.id; renderAll(); });
+    markers[j.id] = marker;
+  });
+}
+
+function renderAccountBar() {
+  document.getElementById("accountName").textContent = "Angemeldet als " + me.name;
+  document.getElementById("accountBadges").innerHTML =
+    getTierBadgeHtml(me.tierBadge) + getTrustBadgeHtml(me.trustFactor);
+}
+
+function renderJobList() {
+  const list = document.getElementById("jobList");
+  const filtered = jobs.filter(j => {
+    if (filter === "alle") return true;
+    if (filter === "offen") return j.status === "offen";
+    if (filter === "angenommen") return j.status === "angenommen" && j.acceptedBy && j.acceptedBy.id === me.id;
+    if (filter === "erledigt") return j.status === "erledigt";
+  });
+  if (filtered.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text2);">Keine Jobs in dieser Ansicht.</p>';
+    return;
+  }
+  list.innerHTML = "";
+  filtered.forEach(j => {
+    const div = document.createElement("div");
+    div.className = "job-item" + (j.id === selectedId ? " selected" : "");
+    const badgeClass = j.status === "offen" ? "badge-open" : j.status === "angenommen" ? "badge-taken" : j.status === "abgelaufen" ? "badge-expired" : "badge-done";
+    const badgeText = j.status === "offen" ? "Offen" : j.status === "angenommen" ? "Angenommen" : j.status === "abgelaufen" ? "Frist abgelaufen" : "Erledigt";
+    const payoutText = payoutLabels[j.payoutMethod] || "PayPal";
+    div.innerHTML = `<p class="job-title">${j.title}</p>
+      <div class="job-meta"><span>${j.city} · ${j.reward} € · ${payoutText}</span><span class="badge ${badgeClass}">${badgeText}</span></div>`;
+    div.addEventListener("click", () => { selectedId = j.id; renderAll(); });
+    list.appendChild(div);
+  });
+}
+
+async function renderDetail() {
+  const detail = document.getElementById("detail");
+  const job = jobs.find(j => j.id === selectedId);
+  if (!job) { detail.style.display = "none"; return; }
+  detail.style.display = "block";
+
+  const methodLabel = payoutLabels[job.payoutMethod] || "PayPal";
+  let escrowHtml = `<div class="escrow-note">${job.totalCharged.toFixed(2)} € vom Auftraggeber in Treuhand reserviert (davon ${job.platformFee.toFixed(2)} € Plattformgebühr, 5% on top)</div>`;
+  let countdownHtml = "";
+  let actionHtml = "";
+  const addressHtml = job.address
+    ? `<p style="font-size:12px;color:var(--text2);margin:0 0 8px;"><strong>Adresse:</strong> ${job.address}</p>`
+    : `<p style="font-size:12px;color:var(--muted);margin:0 0 8px;">Genaue Adresse wird erst nach Annahme angezeigt (Umkreis 500 m auf der Karte).</p>`;
+
+  if (job.status === "offen") {
+    if (job.poster.id === me.id) {
+      actionHtml = `<p class="note">Das ist dein eigener Job – du kannst ihn nicht selbst annehmen.</p>`;
+    } else {
+      actionHtml = `<button class="btn-primary" id="acceptBtn">Job exklusiv annehmen (${job.deadlineHours} Std Zeit)</button>`;
+    }
+  } else if (job.status === "angenommen") {
+    const remaining = new Date(job.deadlineAt).getTime() - Date.now();
+    countdownHtml = `<div class="countdown ${remaining < 15 * 60000 ? "late" : "ok"}">${formatRemaining(remaining)}</div>`;
+    const accepterStats = await getUserStats(job.acceptedBy.id);
+    const rate = accepterStats ? accepterStats.payoutRate : 1;
+    const net = Math.round(job.reward * rate * 100) / 100;
+    escrowHtml += `<div class="escrow-note">Auszahlung an ${job.acceptedBy.name}: ${net.toFixed(2)} €${rate < 1 ? " (80% – neu/wenig Erfahrung, Rest geht an Plattform)" : ""} per ${methodLabel}</div>`;
+    if (job.acceptedBy.id === me.id) {
+      actionHtml = `
+        <div class="photo-box">
+          <label style="margin-top:0;">Fotobeweis hochladen</label>
+          <input type="file" accept="image/*" id="photoInput">
+          <div id="photoPreviewWrap"></div>
+        </div>
+        <button class="btn-primary" id="completeBtn" disabled>Als erledigt markieren & Treuhand freigeben</button>`;
+    } else {
+      actionHtml = `<p class="note">Bereits exklusiv angenommen von ${job.acceptedBy.name}. Nur diese Person kann ihn abschließen.</p>`;
+    }
+  } else if (job.status === "abgelaufen") {
+    actionHtml = `<p class="note">Die Frist ist abgelaufen, ohne dass der Job abgeschlossen wurde. Der Treuhand-Betrag bleibt reserviert; der Ersteller kann den Job erneut freigeben.</p>
+      ${job.poster.id === me.id ? `<button class="btn-secondary" id="reopenBtn">Job erneut freigeben</button>` : ""}`;
+  } else if (job.status === "erledigt") {
+    escrowHtml = `<div class="escrow-note">Treuhand freigegeben · Plattformgebühr vom Auftraggeber (5% on top): ${job.platformFee.toFixed(2)} € · ausgezahlt per ${methodLabel}</div>`;
+    let photoHtml = "";
+    if (job.hasProofPhoto) {
+      if (!jobPhotoCache[job.id]) {
+        try { jobPhotoCache[job.id] = (await api(`/api/jobs/${job.id}/photo`)).photoBase64; } catch (e) {}
+      }
+      if (jobPhotoCache[job.id]) {
+        photoHtml = `<div class="photo-box"><label style="margin-top:0;">Fotobeweis</label><img src="${jobPhotoCache[job.id]}"></div>`;
+      }
+    }
+    actionHtml = `
+      ${photoHtml}
+      <div class="voucher">${methodLabel}-Auszahlung an ${job.acceptedBy.name}: ${job.netPayout.toFixed(2)} €${job.payoutRate < 1 ? ` <span style="font-weight:400;font-size:11px;">(${Math.round(job.payoutRate * 100)}% Quote)</span>` : ""}<br><code>${job.voucherCode}</code></div>`;
+  }
+
+  const accepterBadges = job.acceptedBy
+    ? (await getUserStats(job.acceptedBy.id) || {})
+    : null;
+
+  detail.innerHTML = `
+    <hr>
+    <p class="job-title" style="font-size:15px;">${job.title}</p>
+    <p style="font-size:13px;color:var(--text2);margin:4px 0 10px;">${job.description || ""}</p>
+    ${addressHtml}
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px;">${job.city} · eingestellt von ${job.poster.name}${job.acceptedBy ? (" · angenommen von " + job.acceptedBy.name + " " + (accepterBadges ? getTierBadgeHtml(accepterBadges.tierBadge) + getTrustBadgeHtml(accepterBadges.trustFactor) : "")) : ""}</p>
+    <p class="reward">${job.reward} € · ${methodLabel}</p>
+    ${escrowHtml}
+    ${countdownHtml}
+    ${actionHtml}
+  `;
+
+  const acceptBtn = document.getElementById("acceptBtn");
+  if (acceptBtn) acceptBtn.addEventListener("click", async () => {
+    try {
+      await api(`/api/jobs/${job.id}/accept`, { method: "POST" });
+      await refreshAll();
+    } catch (e) { alert(e.message); }
+  });
+
+  const reopenBtn = document.getElementById("reopenBtn");
+  if (reopenBtn) reopenBtn.addEventListener("click", async () => {
+    try {
+      await api(`/api/jobs/${job.id}/reopen`, { method: "POST" });
+      await refreshAll();
+    } catch (e) { alert(e.message); }
+  });
+
+  const photoInput = document.getElementById("photoInput");
+  if (photoInput) photoInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      job._pendingPhoto = reader.result;
+      document.getElementById("photoPreviewWrap").innerHTML = `<img src="${reader.result}" style="max-width:100%;border-radius:8px;margin-top:8px;">`;
+      const cb = document.getElementById("completeBtn");
+      if (cb) cb.disabled = false;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const completeBtn = document.getElementById("completeBtn");
+  if (completeBtn) completeBtn.addEventListener("click", async () => {
+    if (!job._pendingPhoto) return;
+    completeBtn.disabled = true;
+    completeBtn.textContent = "Wird übertragen...";
+    try {
+      await api(`/api/jobs/${job.id}/complete`, {
+        method: "POST",
+        body: JSON.stringify({ photoBase64: job._pendingPhoto })
+      });
+      await refreshAll();
+    } catch (e) {
+      alert(e.message);
+      completeBtn.disabled = false;
+      completeBtn.textContent = "Als erledigt markieren & Treuhand freigeben";
+    }
+  });
+}
+
+async function renderAll() {
+  try { renderMapPins(); } catch (e) { console.warn("Karte konnte nicht geladen werden:", e.message); }
+  renderAccountBar();
+  renderJobList();
+  await renderDetail();
+}
+
+async function refreshAll() {
+  await loadJobs();
+  await loadMe();
+  await renderAll();
+  await loadBoards();
+}
+
+// ===================== UI-Events =====================
+document.querySelectorAll(".app .tabs .tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".app .tabs .tab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    filter = t.dataset.filter;
+    renderJobList();
+  });
+});
+
+document.getElementById("toggleForm").addEventListener("click", () => {
+  const f = document.getElementById("newJobForm");
+  f.style.display = f.style.display === "none" ? "block" : "none";
+});
+
+document.getElementById("createJobBtn").addEventListener("click", async () => {
+  const title = document.getElementById("f-title").value.trim();
+  const description = document.getElementById("f-desc").value.trim();
+  const cityName = document.getElementById("f-city").value;
+  const address = document.getElementById("f-address").value.trim();
+  const reward = parseFloat(document.getElementById("f-reward").value);
+  const deadlineHours = parseFloat(document.getElementById("f-deadline").value) || 2;
+  const payoutMethod = document.getElementById("f-payout").value;
+  const errBox = document.getElementById("createJobError");
+  errBox.innerHTML = "";
+
+  if (!title || !address || !(reward > 0)) {
+    errBox.innerHTML = '<div class="error-box">Titel, Adresse und eine Belohnung > 0 sind erforderlich.</div>';
+    return;
+  }
+  const base = cities[cityName] || [51.1657, 10.4515];
+  const lat = base[0] + (Math.random() * 0.03 - 0.015);
+  const lng = base[1] + (Math.random() * 0.03 - 0.015);
+
+  try {
+    await api("/api/jobs", {
+      method: "POST",
+      body: JSON.stringify({ title, description, address, city: cityName, lat, lng, reward, payoutMethod, deadlineHours })
+    });
+    document.getElementById("f-title").value = "";
+    document.getElementById("f-desc").value = "";
+    document.getElementById("f-address").value = "";
+    document.getElementById("f-reward").value = "";
+    document.getElementById("f-deadline").value = "";
+    document.getElementById("newJobForm").style.display = "none";
+    await refreshAll();
+  } catch (e) {
+    errBox.innerHTML = `<div class="error-box">${e.message}</div>`;
+  }
+});
+
+function populateCitySelect() {
+  const sel = document.getElementById("f-city");
+  sel.innerHTML = Object.keys(cities).map(c => `<option value="${c}">${c}</option>`).join("");
+}
+
+// ===================== Start =====================
+async function startApp() {
+  document.getElementById("authScreen").style.display = "none";
+  document.getElementById("mainApp").style.display = "block";
+  populateCitySelect();
+  jobUserStatsCache = {};
+  try {
+    await refreshAll();
+  } catch (e) {
+    alert("Verbindung zum Backend fehlgeschlagen: " + e.message);
+  }
+  // Alle 5 Sekunden aktualisieren, damit Änderungen anderer Nutzer sichtbar werden
+  setInterval(() => { refreshAll().catch(() => {}); }, 5000);
+}
+
+(async function init() {
+  if (token) {
+    try {
+      await loadMe();
+      await startApp();
+      return;
+    } catch (e) {
+      token = null;
+      localStorage.removeItem("edas_token");
+    }
+  }
+  document.getElementById("authScreen").style.display = "block";
+})();
+</script>
+</body>
+</html>
