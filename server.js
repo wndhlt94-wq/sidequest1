@@ -347,6 +347,12 @@ const server = http.createServer(async (req, res) => {
     const user = getUserByToken(token);
 
     // öffentliche Routen
+    if (req.method === "GET" && url.pathname === "/") {
+      return jsonResponse(res, 200, {
+        status: "ok",
+        message: "ErledigeDas-Backend läuft. Das ist eine reine API — die eigentliche Webseite ist die index.html, die sich im Hintergrund mit /api/... verbindet.",
+      });
+    }
     if (req.method === "POST" && url.pathname === "/api/register") return await handleRegister(req, res);
     if (req.method === "POST" && url.pathname === "/api/login") return await handleLogin(req, res);
     if (req.method === "GET" && url.pathname === "/api/jobs") return handleListJobs(req, res, user, url.searchParams);
